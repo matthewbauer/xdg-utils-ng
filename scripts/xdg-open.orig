@@ -33,8 +33,6 @@
 #
 #---------------------------------------------
 
-oldIFS=$IFS
-
 manualpage()
 {
 cat << _MANUALPAGE
@@ -412,39 +410,8 @@ open_generic_xdg_mime()
     fi
 }
 
-
-open_generic_browser()
-{    
-    IFS=":"
-    for browser in $BROWSER; do
-        if [ x"$browser" != x"" ]; then
-
-            browser_with_arg=`printf "$browser" "$1" 2>/dev/null`
-            if [ $? -ne 0 ]; then
-                browser_with_arg=$browser;
-            fi
-
-            if [ x"$browser_with_arg" = x"$browser" ]; then
-                "$browser" "$1";
-            else eval '$browser_with_arg'$xdg_redirect_output;
-            fi
-
-            if [ $? -eq 0 ]; then
-                exit_success;
-            fi
-        fi
-    done
-}
-
 open_generic()
 {
-    if [ ! -z "$XDG_GENERIC_OPEN" ]; then
-        $XDG_GENERIC_OPEN "$1"
-        if [ $? -eq 0 ]; then
-            exit_success
-        fi
-    fi
-
     # Paths or file:// URLs
     if (echo "$1" | grep -q '^file://' ||
         ! echo "$1" | egrep -q '^[a-zA-Z+\.\-]+:'); then
@@ -476,7 +443,25 @@ open_generic()
         fi
     fi
 
-    open_generic_browser "$1"
+    IFS=":"
+    for browser in $BROWSER; do
+        if [ x"$browser" != x"" ]; then
+
+            browser_with_arg=`printf "$browser" "$1" 2>/dev/null`
+            if [ $? -ne 0 ]; then
+                browser_with_arg=$browser;
+            fi
+
+            if [ x"$browser_with_arg" = x"$browser" ]; then
+                "$browser" "$1";
+            else eval '$browser_with_arg'$xdg_redirect_output;
+            fi
+
+            if [ $? -eq 0 ]; then
+                exit_success;
+            fi
+        fi
+    done
 
     exit_failure_operation_impossible "no method available for opening '$1'"
 }
@@ -532,15 +517,6 @@ if [ -z "${url}" ] ; then
     exit_failure_syntax "file or URL argument missing"
 fi
 
-if which xdg-open-hook.sh > /dev/null 2> /dev/null; then
-    xdg-email-hook.sh "${mailto}"
-    if [ $? -eq 0 ]; then
-        exit_success
-    else
-        exit_failure_operation_failed
-    fi
-fi
-
 detectDE
 
 if [ x"$DE" = x"" ]; then
@@ -553,30 +529,6 @@ if [ x"$BROWSER" = x"" ]; then
     if [ -n "$DISPLAY" ]; then
         BROWSER=firefox:mozilla:epiphany:konqueror:chromium-browser:google-chrome:$BROWSER
     fi
-fi
-
-# check system config
-if [ ! -z "$XDG_CONFIG_DIRS" ]; then
-    IFS=":"
-    for dir in $XDG_CONFIG_DIRS
-    do
-        cfg="$dir/xdg-utils/xdg-utils.rc"
-        if [ -e "$cfg" ]; then
-            source "$cfg"
-            break;
-        fi
-    done
-fi
-# check users config
-if [ ! -z "$XDG_CONFIG_HOME" ]; then
-    cfg="$XDG_CONFIG_HOME/xdg-utils/xdg-utils.rc"
-    if [ -e "$cfg" ]; then
-        source "$cfg"
-    fi
-fi
-# Update BROWSER variable, based on config file
-if [ ! -z "$XDG_GENERIC_BROWSER" ]; then
-    BROWSER="$XDG_GENERIC_BROWSER:$BROWSER"
 fi
 
 case "$DE" in

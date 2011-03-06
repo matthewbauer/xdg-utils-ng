@@ -510,45 +510,26 @@ open_xfce()
     fi
 }
 
-open_generic_browser()
+open_generic()
 {
     IFS=":"
     for browser in $BROWSER; do
         if [ x"$browser" != x"" ]; then
-	    
+
             browser_with_arg=`printf "$browser" "$1" 2>/dev/null`
-            if [ $? -ne 0 ]; then 
-		browser_with_arg=$browser;
+            if [ $? -ne 0 ]; then browser_with_arg=$browser;
             fi
 
-            if [ x"$browser_with_arg" = x"$browser" ]; then 
-		"$browser" "$1";
-            else 
-		$browser_with_arg;
+            if [ x"$browser_with_arg" = x"$browser" ]; then "$browser" "$1";
+            else $browser_with_arg;
             fi
-	    
-            if [ $? -eq 0 ]; then 
-		exit_success;
+
+            if [ $? -eq 0 ]; then exit_success;
             fi
         fi
     done
 
     exit_failure_operation_impossible "no method available for opening '$1'"
-}
-
-open_generic()
-{
-    if [ ! -z "$XDG_GENERIC_EMAIL" ]; then
-        $XDG_GENERIC_EMAIL "$1"
-
-        if [ $? -eq 0 ]; then
-            exit_success
-        else
-            exit_failure_operation_failed
-        fi
-    else
-        open_generic_browser $@
-    fi
 }
 
 url_encode()
@@ -721,30 +702,6 @@ if [ x"$BROWSER" = x"" ]; then
     if [ -n "$DISPLAY" ]; then
         BROWSER=firefox:mozilla:epiphany:konqueror:chromium-browser:google-chrome:$BROWSER
     fi
-fi
-
-# check system config
-if [ ! -z "$XDG_CONFIG_DIRS" ]; then
-    IFS=":"
-    for dir in $XDG_CONFIG_DIRS
-    do
-        cfg="$dir/xdg-utils/xdg-utils.rc"
-        if [ -e "$cfg" ]; then
-            source "$cfg"
-            break;
-        fi
-    done
-fi
-# check users config
-if [ ! -z "$XDG_CONFIG_HOME" ]; then
-    cfg="$XDG_CONFIG_HOME/xdg-utils/xdg-utils.rc"
-    if [ -e "$cfg" ]; then
-        source "$cfg"
-    fi
-fi
-# Update BROWSER variable, based on config file
-if [ ! -z "$XDG_GENERIC_BROWSER" ]; then
-    BROWSER="$XDG_GENERIC_BROWSER:$BROWSER"
 fi
 
 case "$DE" in

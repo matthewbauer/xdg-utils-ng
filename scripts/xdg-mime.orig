@@ -217,11 +217,7 @@ and adding descriptions for new file types
 
 Synopsis
 
-xdg-mime query { filetype | default[ --command] } ...
-	filetype -- detect MIME type of file
-	default  -- print default handler for MIME
-	            with option --command - print binary command instead
-	            desktop entry
+xdg-mime query { filetype | default } ...
 
 xdg-mime default application mimetype(s)
 
@@ -674,35 +670,9 @@ make_default_generic()
     mv ${default_file}.new $default_file
 }
 
-# This handles backslashes but not quote marks.
-first_word()
-{
-    read first rest
-    echo "$first"
-}
-
-desktop_file_to_binary()
-{
-    search="${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-    desktop="`basename "$1"`"
-    IFS=:
-    for dir in $search; do
-        unset IFS
-        [ "$dir" -a -d "$dir/applications" ] || continue
-        file="$dir/applications/$desktop"
-        [ -r "$file" ] || continue
-        # Remove any arguments (%F, %f, %U, %u, etc.).
-        command="`grep -E "^Exec(\[[^]=]*])?=" "$file" | cut -d= -f 2- | first_word`"
-        command="`which "$command"`"
-        readlink -f "$command"
-        return
-    done
-}
-
 defapp_generic()
 {
     MIME="$1"
-    ARG="$2"
     xdg_user_dir="$XDG_DATA_HOME"
     [ -n "$xdg_user_dir" ] || xdg_user_dir="$HOME/.local/share"
     xdg_user_dir="$xdg_user_dir/$xdg_dir_name"
@@ -713,12 +683,8 @@ defapp_generic()
        DEBUG 2 "Checking $x/applications/defaults.list"
        trader_result=`grep "$MIME=" $x/applications/defaults.list 2> /dev/null | cut -d '=' -f 2 | cut -d ';' -f 1`
        if [ -n "$trader_result" ] ; then
-	   if [ "$ARG" == "--command" ]; then
-	       desktop_file_to_binary "$trader_result"
-	   else
-               echo $trader_result
-	   fi
-           exit_success
+          echo $trader_result
+          exit_success
        fi
     done
     exit_success
@@ -791,7 +757,6 @@ case $1 in
       default)
         action=defapp
         mimetype="$2"
-	mimetype_arg="$3"
         if [ -z "$mimetype" ] ; then
             exit_failure_syntax "mimetype argument missing"
         fi
@@ -900,7 +865,7 @@ if [ "$action" = "defapp" ]; then
         ;;
 
         *)
-        defapp_generic "$mimetype" "$mimetype_arg"
+        defapp_generic "$mimetype"
         ;;
     esac
     exit_failure_operation_impossible "no method available for quering default application for '$mimetype'"
